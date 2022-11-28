@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:startup_namer/Components/dialog_box.dart';
 import 'package:startup_namer/Components/todo_tile.dart';
+import 'package:startup_namer/Data/database.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -10,11 +12,20 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  List toDoList = [
-    ["My First Task", true],
-    ["My Second Task", false]
-  ];
+  final _myBox = Hive.box("mybox");
   final _controller = TextEditingController();
+  TodoDatabase db = TodoDatabase();
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    if (_myBox.get("TODOLIST") == null) {
+      db.createInitialData();
+    } else {
+      db.loadData();
+    }
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,11 +40,11 @@ class _HomePageState extends State<HomePage> {
           child: const Icon(Icons.add),
         ),
         body: ListView.builder(
-            itemCount: toDoList.length,
+            itemCount: db.toDoList.length,
             itemBuilder: ((context, index) {
               return ToDoTile(
-                taskName: toDoList[index][0],
-                taskCompleted: toDoList[index][1],
+                taskName: db.toDoList[index][0],
+                taskCompleted: db.toDoList[index][1],
                 onChanged: (value) => checkBoxChanged(value, index),
                 deleteFunction: (context) => deleteTask(index),
               );
@@ -42,8 +53,9 @@ class _HomePageState extends State<HomePage> {
 
   checkBoxChanged(bool? value, int index) {
     setState(() {
-      toDoList[index][1] = !toDoList[index][1];
+      db.toDoList[index][1] = !db.toDoList[index][1];
     });
+    db.updateDatabase();
   }
 
   void addToDoList() {
@@ -55,19 +67,22 @@ class _HomePageState extends State<HomePage> {
         onCancel: () => Navigator.of(context).pop(),
       ),
     );
+    db.updateDatabase();
   }
 
   void saveText() {
     setState(() {
-      toDoList.add([_controller.text, false]);
+      db.toDoList.add([_controller.text, false]);
       _controller.clear();
     });
     Navigator.of(context).pop();
+    db.updateDatabase();
   }
 
   deleteTask(int index) {
     setState(() {
-      toDoList.removeAt(index);
+      db.toDoList.removeAt(index);
     });
+    db.updateDatabase();
   }
 }
